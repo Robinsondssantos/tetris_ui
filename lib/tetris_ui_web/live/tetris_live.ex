@@ -6,21 +6,13 @@ defmodule TetrisUiWeb.TetrisLive do
   @box_height 20
 
   def mount(_params, _session, socket) do
-    {
-      :ok, new_game(socket)
-      # assign(
-      #   socket,
-      #   tetromino: [
-      #     {1, 1, :orange}, {2, 1, :orange}, {3, 1, :orange}, {4, 1, :orange},
-      #   ]
-      # )
-    }
+    {:ok, new_game(socket)}
   end
 
   def render(assigns) do
     ~H"""
     <h1>Hello</h1>
-    <div>
+    <div phx-window-keydown="keydown">
       <%= raw svg_head() %>
       <%= raw boxes(@tetromino) %>
       <%= raw svg_foot() %>
@@ -51,6 +43,7 @@ defmodule TetrisUiWeb.TetrisLive do
     points =
       brick
       |> Tetris.Brick.prepare
+      |> Tetris.Points.move_to_location(brick.location)
       |> Tetris.Points.with_color(color(brick))
 
     assign(socket, tetromino: points)
@@ -59,6 +52,7 @@ defmodule TetrisUiWeb.TetrisLive do
   def svg_head() do
     """
     <svg
+    style="background-color: #F8F8F8;"
     version="1.0"
     id="Layer_1"
     xmlns="http://www.w3.org/2000/svg"
@@ -90,7 +84,7 @@ defmodule TetrisUiWeb.TetrisLive do
     <rect
       x="#{x+1}" y="#{y+1}"
       style="fill:##{shade};"
-      width="#{@box_width - 2}" height="#{@box_height - 2}" />
+      width="#{@box_width - 2}" height="#{@box_height - 1}" />
     """
   end
 
@@ -119,5 +113,35 @@ defmodule TetrisUiWeb.TetrisLive do
   defp color(%{name: :o}), do: :orange
   defp color(%{name: :z}), do: :green
 
+  def move(direction, socket) do
+    socket
+    |> do_move(direction)
+    |> show
+  end
 
+  def do_move(socket, :left) do
+    assign(socket, brick: socket.assigns.brick |> Tetris.Brick.left)
+  end
+
+  def do_move(socket, :right) do
+    assign(socket, brick: socket.assigns.brick |> Tetris.Brick.right)
+  end
+
+  def do_move(socket, :turn) do
+    assign(socket, brick: socket.assigns.brick |> Tetris.Brick.spin_90)
+  end
+
+  def handle_event("keydown", %{"key" => "ArrowLeft"}, socket) do
+    {:noreply, move(:left, socket)}
+  end
+
+  def handle_event("keydown", %{"key" => "ArrowRight"}, socket) do
+    {:noreply, move(:right, socket)}
+  end
+
+  def handle_event("keydown", %{"key" => "ArrowUp"}, socket) do
+    {:noreply, move(:turn, socket)}
+  end
+
+  def handle_event("keydown", _, socket), do: {:noreply, socket}
 end
